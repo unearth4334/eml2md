@@ -21,7 +21,9 @@ project/
 │   └── email1/    # Example output directory
 │       ├── email1.md
 │       └── [attachments]
-└── done/          # Processed .eml files are moved here
+├── done/          # Processed .eml files are moved here
+├── .gitignore     # Configured to ignore email content
+└── create_gitkeep.py  # Utility script to set up directory structure
 ```
 
 ## Installation
@@ -34,13 +36,19 @@ project/
 pip install -r requirements.txt
 ```
 
+4. Set up the required directory structure:
+
+```bash
+python create_gitkeep.py
+```
+
 ## Usage
 
 1. Place your `.eml` files in the `input` directory
 2. Run the script:
 
 ```bash
-python eml_to_md_converter.py
+python eml2md.py
 ```
 
 3. Find your converted files in the `output` directory, organized in subdirectories named after the original email files
@@ -89,6 +97,21 @@ This is the content of the email.
 - Python 3.7+
 - email-validator
 - python-dateutil
+
+## Project Components
+
+### Main Script
+
+- `eml2md.py` - The main script that handles the conversion process
+
+### Utility Scripts
+
+- `create_gitkeep.py` - Sets up the required directory structure and creates .gitkeep files to ensure the directories are tracked by Git while ignoring their contents. Run this script once when setting up the project.
+
+### Configuration Files
+
+- `.gitignore` - Configured to track the directory structure but ignore email files and content
+- `requirements.txt` - Lists the Python package dependencies
 
 ## Limitations
 
