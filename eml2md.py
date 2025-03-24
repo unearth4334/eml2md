@@ -5,10 +5,6 @@ import re
 import datetime
 from email.utils import parsedate_to_datetime
 from email.header import decode_header
-import quopri
-import base64
-from pathlib import Path
-
 
 def decode_content(part):
     """Decode email part content based on its encoding."""
@@ -103,10 +99,19 @@ def extract_email_parts(msg):
     }
 
 
-def create_markdown_content(emails):
-    """Create markdown content from extracted email parts."""
+def create_markdown_content(emails, newest_first=False):
+    """Create markdown content from extracted email parts.
+
+    Args:
+        emails: List of extracted email parts
+        newest_first: If True, sorts emails from newest to oldest. Default is oldest to newest.
+    """
     # Sort emails by date
-    sorted_emails = sorted(emails, key=lambda x: x['date'] if x['date'] else datetime.datetime.min)
+    sorted_emails = sorted(
+        emails,
+        key=lambda x: x['date'] if x['date'] else datetime.datetime.min,
+        reverse=newest_first  # Set to True for newest-first, False for oldest-first
+    )
 
     markdown_content = "# Email Thread\n\n"
 
@@ -141,8 +146,13 @@ def create_markdown_content(emails):
     return markdown_content
 
 
-def process_eml_file(eml_file_path):
-    """Process an EML file and convert it to Markdown with attachments."""
+def process_eml_file(eml_file_path, newest_first=False):
+    """Process an EML file and convert it to Markdown with attachments.
+
+    Args:
+        eml_file_path: Path to the EML file
+        newest_first: If True, sorts emails from newest to oldest. Default is oldest to newest.
+    """
     # Create output directory name based on EML filename
     eml_basename = os.path.basename(eml_file_path)
     output_dir_name = os.path.splitext(eml_basename)[0]
@@ -175,7 +185,7 @@ def process_eml_file(eml_file_path):
         emails = [extract_email_parts(msg)]
 
     # Create markdown content
-    markdown_content = create_markdown_content(emails)
+    markdown_content = create_markdown_content(emails, newest_first)
 
     # Save markdown file
     md_file_path = os.path.join(output_dir_path, f"{output_dir_name}.md")
@@ -202,6 +212,14 @@ def process_eml_file(eml_file_path):
 
 def main():
     """Main function to process all EML files in the input directory."""
+    import argparse
+
+    # Set up command line arguments
+    parser = argparse.ArgumentParser(description='Convert EML files to Markdown format')
+    parser.add_argument('--newest-first', action='store_true',
+                        help='Sort emails from newest to oldest (default: oldest to newest)')
+    args = parser.parse_args()
+
     # Create required directories if they don't exist
     for directory in ['input', 'output', 'done']:
         os.makedirs(directory, exist_ok=True)
@@ -214,7 +232,7 @@ def main():
         if filename.lower().endswith('.eml'):
             eml_file_path = os.path.join(input_dir, filename)
             try:
-                md_file_path = process_eml_file(eml_file_path)
+                md_file_path = process_eml_file(eml_file_path, args.newest_first)
                 processed_files.append((filename, md_file_path))
                 print(f"Processed: {filename} -> {md_file_path}")
             except Exception as e:

@@ -2,14 +2,7 @@
 
 This tool converts email files (`.eml`) to Markdown format (`.md`) while preserving the email thread structure and extracting attachments.
 
-## Features
-
-- Converts `.eml` files to well-formatted Markdown documents
-- Extracts and saves all email attachments
-- Preserves email thread structure, sorted by date/time
-- Captures email metadata (date, from, to, cc, subject)
-- Handles HTML-formatted emails by converting to plain text
-- Moves processed files to a separate directory
+ Moves processed files to a separate directory
 - Creates a clean directory structure for output files
 
 ## Directory Structure
@@ -48,10 +41,20 @@ python create_gitkeep.py
 2. Run the script:
 
 ```bash
+# Default: oldest to newest email order
 python eml2md.py
+
+# Optional: newest to oldest email order
+python eml2md.py --newest-first
 ```
 
 3. Find your converted files in the `output` directory, organized in subdirectories named after the original email files
+
+### Command Line Options
+
+| Option | Description |
+|--------|-------------|
+| `--newest-first` | Sort emails from newest to oldest in the markdown file (default is oldest to newest) |
 
 ## Output Format
 
