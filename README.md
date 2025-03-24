@@ -2,7 +2,14 @@
 
 This tool converts email files (`.eml`) to Markdown format (`.md`) while preserving the email thread structure and extracting attachments.
 
- Moves processed files to a separate directory
+## Features
+
+- Converts `.eml` files to Markdown format
+- Preserves email thread structure using two methods:
+  - Standard RFC822 embedded message detection
+  - Pattern matching to detect quoted emails in the body text
+- Extracts and saves attachments
+- Moves processed files to a separate directory
 - Creates a clean directory structure for output files
 
 ## Directory Structure
@@ -65,6 +72,25 @@ The generated Markdown file includes:
 - Email content
 - Links to extracted attachments
 
+## Thread Detection
+
+The tool uses two methods to detect email threads:
+
+1. **Embedded Messages**: Detects properly formatted `message/rfc822` parts in multipart emails
+2. **Pattern Matching**: Analyzes the email body text to find patterns indicating quoted emails such as:
+   - Outlook format: "From: ... Sent: ... To: ... Subject: ..."
+   - Reply format: "On [date], [person] wrote:"
+   - Gmail format: "On [date] at [time], [person] wrote:"
+
+### Caveats for Thread Detection
+
+- Pattern matching is not 100% reliable and depends on email client formatting
+- Different email clients use different quoting styles which may not be detected
+- Date parsing from text may not always be accurate
+- The original formatting of quoted text might be altered
+- Some false positives may occur if the email body contains text that matches the patterns
+- Deeply nested conversations might not be fully reconstructed
+
 ## Example
 
 ```markdown
@@ -121,7 +147,8 @@ This is the content of the email.
 - The tool is designed for English-language emails
 - Complex HTML formatting may be simplified in the conversion process
 - Email threads are reconstructed based on date/time, which may not always match the original thread structure
+- Thread detection through pattern matching may miss some quoted emails or incorrectly identify parts of the content as separate emails
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the LICENSE file for details
