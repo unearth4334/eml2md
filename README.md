@@ -1,14 +1,16 @@
 # EML to Markdown Converter
 
-This tool converts email files (`.eml`) to Markdown format (`.md`) while preserving the email thread structure and extracting attachments.
+This tool converts email files (`.eml`) to Markdown format (`.md`) while preserving the email thread structure, extracting attachments, and intelligently removing duplicate emails in threads.
 
 ## Features
 
 - Converts `.eml` files to Markdown format
-- Preserves email thread structure using two methods:
+- Preserves email thread structure using multiple methods:
   - Standard RFC822 embedded message detection
   - Pattern matching to detect quoted emails in the body text
+  - SimHash-based deduplication to remove redundant email content
 - Extracts and saves attachments
+- Organizes content in chronological order (oldest-to-newest or newest-to-oldest)
 - Moves processed files to a separate directory
 - Creates a clean directory structure for output files
 
@@ -48,11 +50,14 @@ python create_gitkeep.py
 2. Run the script:
 
 ```bash
-# Default: oldest to newest email order
+# Default: oldest to newest email order, default deduplication
 python eml2md.py
 
 # Optional: newest to oldest email order
 python eml2md.py --newest-first
+
+# Adjust deduplication sensitivity (higher = more aggressive)
+python eml2md.py --dedup-threshold 12
 ```
 
 3. Find your converted files in the `output` directory, organized in subdirectories named after the original email files
@@ -62,6 +67,33 @@ python eml2md.py --newest-first
 | Option | Description |
 |--------|-------------|
 | `--newest-first` | Sort emails from newest to oldest in the markdown file (default is oldest to newest) |
+| `--dedup-threshold VALUE` | Set the similarity threshold for deduplication (default is 8, higher values mean more aggressive deduplication) |
+
+## Thread Detection and Deduplication
+
+The tool uses three complementary methods to handle email threads:
+
+1. **Embedded Messages**: Detects properly formatted `message/rfc822` parts in multipart emails.
+
+2. **Pattern Matching**: Analyzes the email body text to find patterns indicating quoted emails such as:
+   - Outlook format: "From: ... Sent: ... To: ... Subject: ..."
+   - Reply format: "On [date], [person] wrote:"
+   - Gmail format: "On [date] at [time], [person] wrote:"
+
+3. **SimHash Deduplication**: Uses content-based hashing to identify and remove duplicate emails, even when formatting differs:
+   - Creates a fingerprint for each email that preserves similarity
+   - Compares emails using Hamming distance between fingerprints
+   - Removes duplicates while prioritizing newer emails
+
+### How SimHash Deduplication Works
+
+The SimHash algorithm:
+1. Extracts features from the email (sender, subject, key content lines)
+2. Creates a 64-bit fingerprint that preserves content similarity
+3. Compares fingerprints using Hamming distance (bit differences)
+4. Groups similar emails and keeps only the most representative one
+
+The default threshold of 8 bits (out of 64) works well for most emails, but you can adjust it with the `--dedup-threshold` parameter. Higher values will be more aggressive in identifying duplicates.
 
 ## Output Format
 
@@ -71,25 +103,6 @@ The generated Markdown file includes:
 - Metadata for each email (date, from, to, cc, subject)
 - Email content
 - Links to extracted attachments
-
-## Thread Detection
-
-The tool uses two methods to detect email threads:
-
-1. **Embedded Messages**: Detects properly formatted `message/rfc822` parts in multipart emails
-2. **Pattern Matching**: Analyzes the email body text to find patterns indicating quoted emails such as:
-   - Outlook format: "From: ... Sent: ... To: ... Subject: ..."
-   - Reply format: "On [date], [person] wrote:"
-   - Gmail format: "On [date] at [time], [person] wrote:"
-
-### Caveats for Thread Detection
-
-- Pattern matching is not 100% reliable and depends on email client formatting
-- Different email clients use different quoting styles which may not be detected
-- Date parsing from text may not always be accurate
-- The original formatting of quoted text might be altered
-- Some false positives may occur if the email body contains text that matches the patterns
-- Deeply nested conversations might not be fully reconstructed
 
 ## Example
 
@@ -146,8 +159,9 @@ This is the content of the email.
 
 - The tool is designed for English-language emails
 - Complex HTML formatting may be simplified in the conversion process
-- Email threads are reconstructed based on date/time, which may not always match the original thread structure
-- Thread detection through pattern matching may miss some quoted emails or incorrectly identify parts of the content as separate emails
+- Pattern matching depends on email client formatting and may not detect all thread styles
+- Deduplication thresholds may need adjustment for your specific emails
+- Very short emails might be incorrectly identified as duplicates (adjust threshold if needed)
 
 ## License
 
