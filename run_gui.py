@@ -14,8 +14,10 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Launch EML to Markdown GUI application')
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='Enable verbose logging for debugging')
+    parser.add_argument('--tkinter', '-t', action='store_true',
+                        help='Force use of native Tkinter GUI (skip web-based GUI)')
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
-    sys.exit(main(verbose=args.verbose))
+    sys.exit(main(verbose=args.verbose, force_tkinter=args.tkinter))

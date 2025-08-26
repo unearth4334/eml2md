@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
 GUI launcher for EML to Markdown converter.
-Starts FastAPI server and opens a chromium-based window.
-Terminates server when window is closed.
+Tries FastAPI server approach first, falls back to Tkinter if socket binding fails.
 """
 
 import subprocess
@@ -13,20 +12,51 @@ import os
 import signal
 import psutil
 from pathlib import Path
+import socket
 
 class GUILauncher:
-    def __init__(self, verbose=False):
+    def __init__(self, verbose=False, force_tkinter=False):
         self.server_process = None
         self.browser_process = None
         self.running = True
         self.verbose = verbose
+        self.force_tkinter = force_tkinter
         
     def log(self, message):
         """Print message if verbose mode is enabled."""
         if self.verbose:
             print(f"[VERBOSE] {message}")
 
-    def find_chromium_browser(self):
+    def check_port_available(self, port=8000):
+        """Check if port is available for binding."""
+        try:
+            self.log(f"Checking if port {port} is available...")
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.bind(('127.0.0.1', port))
+                self.log(f"Port {port} is available")
+                return True
+        except OSError as e:
+            self.log(f"Port {port} is not available: {e}")
+            return False
+
+    def start_tkinter_gui(self):
+        """Start Tkinter-based GUI as fallback."""
+        print("Starting Tkinter-based GUI...")
+        self.log("Attempting to start Tkinter GUI")
+        
+        try:
+            from gui_tkinter import main as tkinter_main
+            self.log("Successfully imported Tkinter GUI module")
+            print("Launching native desktop interface...")
+            return tkinter_main()
+        except ImportError as e:
+            print(f"Error importing Tkinter GUI: {e}")
+            self.log(f"Failed to import Tkinter GUI: {e}")
+            return 1
+        except Exception as e:
+            print(f"Error starting Tkinter GUI: {e}")
+            self.log(f"Failed to start Tkinter GUI: {e}")
+            return 1
         """Find available chromium-based browser."""
         self.log("Searching for chromium-based browsers...")
         browsers = [
@@ -218,20 +248,33 @@ class GUILauncher:
         self.log("Cleanup process completed")
 
     def run(self):
-        """Main launcher method."""
+        """Main launcher method with fallback logic."""
         print("EML to Markdown Converter GUI Launcher")
         print("=" * 40)
         
+        # If force_tkinter is set, skip web-based GUI
+        if self.force_tkinter:
+            print("Using native Tkinter GUI (forced)")
+            return self.start_tkinter_gui()
+        
+        # Check if port is available
+        if not self.check_port_available():
+            print("Port 8000 is not available, falling back to native GUI...")
+            return self.start_tkinter_gui()
+        
+        # Try web-based GUI first
+        print("Attempting to start web-based GUI...")
+        
         # Start server
         if not self.start_server():
-            print("Failed to start server. Exiting.")
-            return 1
+            print("Failed to start server. Falling back to native GUI...")
+            return self.start_tkinter_gui()
         
         # Open browser
         if not self.open_browser():
-            print("Failed to open browser. Server is running at http://127.0.0.1:8000")
+            print("Failed to open browser. Falling back to native GUI...")
             self.cleanup()
-            return 1
+            return self.start_tkinter_gui()
         
         # Monitor browser in separate thread
         monitor_thread = threading.Thread(target=self.monitor_browser, daemon=True)
@@ -252,9 +295,9 @@ class GUILauncher:
         print("GUI application terminated.")
         return 0
 
-def main(verbose=False):
+def main(verbose=False, force_tkinter=False):
     """Entry point for GUI launcher."""
-    launcher = GUILauncher(verbose=verbose)
+    launcher = GUILauncher(verbose=verbose, force_tkinter=force_tkinter)
     
     # Handle cleanup on exit
     def signal_handler(signum, frame):
