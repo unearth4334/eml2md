@@ -66,31 +66,59 @@ python eml2md.py --dedup-threshold 12
 
 ### Graphical User Interface
 
-Launch the FastAPI-based GUI for a web interface:
+Launch the GUI application with automatic fallback for network restrictions:
 
 ```bash
-# Start the GUI application
+# Start the GUI application (tries web interface, falls back to native)
 python run_gui.py
 
-# For debugging server startup issues, use verbose mode
+# Force native Tkinter GUI (skip web interface)
+python run_gui.py --tkinter
+
+# For debugging, use verbose mode
 python run_gui.py --verbose
+
+# Combine options
+python run_gui.py --verbose --tkinter
 ```
 
-This will:
-- Start a FastAPI web server
-- Open a chromium-based browser window with the interface
-- Automatically terminate the server when the window is closed
+#### GUI Features
 
-If the GUI fails to start, use the `--verbose` flag to see detailed error messages that will help identify the problem (e.g., port conflicts, missing dependencies, browser issues).
+The GUI launcher provides two interfaces:
 
-![FastAPI GUI Interface](https://github.com/user-attachments/assets/a5231a9a-31d8-475b-ab31-1f8b9beac84a)
+1. **Web Interface** (default): FastAPI-based interface that opens in a browser window
+2. **Native Interface** (fallback): Tkinter-based desktop application
+
+The application automatically detects if port 8000 is available and falls back to the native interface if there are network restrictions, port conflicts, or browser issues.
+
+#### Troubleshooting GUI Issues
+
+If you encounter socket binding errors like:
+```
+ERROR: [Errno 13] error while attempting to bind on address ('127.0.0.1', 8000)
+```
+
+The application will automatically fall back to the native Tkinter GUI. You can also force the native GUI directly:
+
+```bash
+python run_gui.py --tkinter
+```
 
 ### Command Line Options
+
+#### EML Conversion (eml2md.py)
 
 | Option | Description |
 |--------|-------------|
 | `--newest-first` | Sort emails from newest to oldest in the markdown file (default is oldest to newest) |
 | `--dedup-threshold VALUE` | Set the similarity threshold for deduplication (default is 8, higher values mean more aggressive deduplication) |
+
+#### GUI Application (run_gui.py)
+
+| Option | Description |
+|--------|-------------|
+| `--verbose`, `-v` | Enable detailed logging for debugging |
+| `--tkinter`, `-t` | Force native Tkinter GUI (skip web interface) |
 
 ## Thread Detection and Deduplication
 
