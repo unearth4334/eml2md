@@ -66,20 +66,7 @@ python eml2md.py --dedup-threshold 12
 
 ### Email Reader GUI
 
-For reading and extracting individual emails from converted markdown files, you have two options:
-
-#### Option 1: Python GUI (tkinter + FastAPI)
-```bash
-python run_gui.py
-```
-
-**Note**: This may fail in restricted network environments with the error:
-```
-ERROR: [Errno 13] error while attempting to bind on address ('127.0.0.1', 8000)
-```
-
-#### Option 2: DataviewJS GUI (Obsidian)
-For environments with network restrictions, use the Obsidian-based GUI:
+For reading and extracting individual emails from converted markdown files, use the Obsidian-based DataviewJS GUI:
 
 1. Install [Obsidian](https://obsidian.md/) and enable the Dataview plugin
 2. Copy `email_reader_gui.md` to your Obsidian vault  
@@ -88,26 +75,6 @@ For environments with network restrictions, use the Obsidian-based GUI:
 
 See `DATAVIEWJS_README.md` for detailed setup instructions.
 
-### Graphical User Interface
-
-Launch the FastAPI-based GUI for a web interface:
-
-```bash
-# Start the GUI application
-python run_gui.py
-
-# For debugging server startup issues, use verbose mode
-python run_gui.py --verbose
-```
-
-This will:
-- Start a FastAPI web server
-- Open a chromium-based browser window with the interface
-- Automatically terminate the server when the window is closed
-
-If the GUI fails to start, use the `--verbose` flag to see detailed error messages that will help identify the problem (e.g., port conflicts, missing dependencies, browser issues).
-
-![FastAPI GUI Interface](https://github.com/user-attachments/assets/a5231a9a-31d8-475b-ab31-1f8b9beac84a)
 
 ### Command Line Options
 
@@ -186,11 +153,6 @@ This is the content of the email.
 - Python 3.7+
 - email-validator
 - python-dateutil
-- fastapi (for GUI)
-- uvicorn (for GUI)
-- jinja2 (for GUI)  
-- psutil (for GUI)
-- A chromium-based browser (Google Chrome, Chromium, etc.) for GUI
 
 ## Project Components
 
@@ -198,23 +160,16 @@ This is the content of the email.
 
 - `eml2md.py` - The main script that handles the conversion process
 
-### GUI Applications
+### GUI Application
 
-#### FastAPI GUI (Standard)
-- `app.py` - FastAPI web application providing the GUI interface
-- `gui_launcher.py` - Launcher script that starts the server and opens browser window
-- `run_gui.py` - Simple entry point for launching the GUI
-- `templates/` - HTML templates for the web interface
-
-#### DataviewJS GUI (Network-Restricted Environments)
-- `email_reader_gui.md` - Obsidian DataviewJS implementation for environments with network restrictions
+#### DataviewJS GUI (Obsidian)
+- `email_reader_gui.md` - Obsidian DataviewJS implementation for reading and extracting emails
 - `DATAVIEWJS_README.md` - Setup and usage instructions for the DataviewJS GUI
 - `sample_email_thread.md` - Sample email data for testing
 
 ### Email Reader Utilities
 
 - `read_md_email.py` - Python script for reading and extracting emails from markdown files (tkinter version)
-- `test_read_md_email.py` - Test version without tkinter dependency
 
 ### Utility Scripts
 
