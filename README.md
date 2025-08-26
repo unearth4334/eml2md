@@ -64,6 +64,30 @@ python eml2md.py --dedup-threshold 12
 
 3. Find your converted files in the `output` directory, organized in subdirectories named after the original email files
 
+### Email Reader GUI
+
+For reading and extracting individual emails from converted markdown files, you have two options:
+
+#### Option 1: Python GUI (tkinter + FastAPI)
+```bash
+python run_gui.py
+```
+
+**Note**: This may fail in restricted network environments with the error:
+```
+ERROR: [Errno 13] error while attempting to bind on address ('127.0.0.1', 8000)
+```
+
+#### Option 2: DataviewJS GUI (Obsidian)
+For environments with network restrictions, use the Obsidian-based GUI:
+
+1. Install [Obsidian](https://obsidian.md/) and enable the Dataview plugin
+2. Copy `email_reader_gui.md` to your Obsidian vault  
+3. Open the file in Obsidian - the GUI will appear automatically
+4. Select markdown files, browse emails, and extract them with Obsidian formatting
+
+See `DATAVIEWJS_README.md` for detailed setup instructions.
+
 ### Graphical User Interface
 
 Launch the FastAPI-based GUI for a web interface:
@@ -174,12 +198,23 @@ This is the content of the email.
 
 - `eml2md.py` - The main script that handles the conversion process
 
-### GUI Application
+### GUI Applications
 
+#### FastAPI GUI (Standard)
 - `app.py` - FastAPI web application providing the GUI interface
 - `gui_launcher.py` - Launcher script that starts the server and opens browser window
 - `run_gui.py` - Simple entry point for launching the GUI
 - `templates/` - HTML templates for the web interface
+
+#### DataviewJS GUI (Network-Restricted Environments)
+- `email_reader_gui.md` - Obsidian DataviewJS implementation for environments with network restrictions
+- `DATAVIEWJS_README.md` - Setup and usage instructions for the DataviewJS GUI
+- `sample_email_thread.md` - Sample email data for testing
+
+### Email Reader Utilities
+
+- `read_md_email.py` - Python script for reading and extracting emails from markdown files (tkinter version)
+- `test_read_md_email.py` - Test version without tkinter dependency
 
 ### Utility Scripts
 
