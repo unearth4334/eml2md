@@ -46,6 +46,8 @@ python create_gitkeep.py
 
 ## Usage
 
+### Command Line Interface
+
 1. Place your `.eml` files in the `input` directory
 2. Run the script:
 
@@ -61,6 +63,22 @@ python eml2md.py --dedup-threshold 12
 ```
 
 3. Find your converted files in the `output` directory, organized in subdirectories named after the original email files
+
+### Graphical User Interface
+
+Launch the FastAPI-based GUI for a web interface:
+
+```bash
+# Start the GUI application
+python run_gui.py
+```
+
+This will:
+- Start a FastAPI web server
+- Open a chromium-based browser window with the interface
+- Automatically terminate the server when the window is closed
+
+![FastAPI GUI Interface](https://github.com/user-attachments/assets/a5231a9a-31d8-475b-ab31-1f8b9beac84a)
 
 ### Command Line Options
 
@@ -139,12 +157,24 @@ This is the content of the email.
 - Python 3.7+
 - email-validator
 - python-dateutil
+- fastapi (for GUI)
+- uvicorn (for GUI)
+- jinja2 (for GUI)  
+- psutil (for GUI)
+- A chromium-based browser (Google Chrome, Chromium, etc.) for GUI
 
 ## Project Components
 
 ### Main Script
 
 - `eml2md.py` - The main script that handles the conversion process
+
+### GUI Application
+
+- `app.py` - FastAPI web application providing the GUI interface
+- `gui_launcher.py` - Launcher script that starts the server and opens browser window
+- `run_gui.py` - Simple entry point for launching the GUI
+- `templates/` - HTML templates for the web interface
 
 ### Utility Scripts
 
