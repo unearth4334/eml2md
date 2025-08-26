@@ -93,8 +93,6 @@ dv.container.appendChild(statusDiv);
 ```
 
 ```dataviewjs
-const { exec } = require('child_process');
-const path = require('path');
 
 class EmailReaderGUI {
     constructor() {
@@ -306,51 +304,86 @@ class EmailReaderGUI {
     }
 
     async getMarkdownFiles() {
-        return new Promise((resolve, reject) => {
-            const command = 'cd %HOMEPATH%\\.obsidian\\Emails\\.eml2md\\output & dir /b *.md';
-            exec(command, { cwd: process.cwd() }, (error, stdout, stderr) => {
-                if (error) {
-                    console.error('Error listing markdown files:', error);
-                    reject(error);
-                    return;
-                }
-                const files = stdout.split(/\\r?\\n/).map(f => f.trim()).filter(f => f.endsWith('.md'));
-                resolve(files);
+        try {
+            console.log('Getting markdown files from vault...');
+            // Get all markdown files in the vault, filtered to Emails/eml2md/output/ directory
+            const files = app.vault.getMarkdownFiles();
+            console.log(`Found ${files.length} total markdown files in vault`);
+            
+            const filteredFiles = files.filter(file => 
+                file.path.endsWith('.md') && 
+                file.path.startsWith('Emails/eml2md/output/') &&
+                !file.path.includes('email_reader_gui.md') // Exclude this file
+            );
+            console.log(`Filtered to ${filteredFiles.length} files in Emails/eml2md/output/`);
+            console.log('Filtered files:', filteredFiles.map(f => f.path));
+            
+            return filteredFiles;
+        } catch (error) {
+            console.error('Error getting markdown files:', error);
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                vaultExists: typeof app !== 'undefined' && typeof app.vault !== 'undefined'
             });
-        });
+            throw error;
+        }
     }
 
-    async loadFileContent(filename) {
-        return new Promise((resolve, reject) => {
-            const fullPath = `%HOMEPATH%\\.obsidian\\Emails\\.eml2md\\output\\${filename}`;
-            const command = `type "${fullPath}"`;
-            exec(command, { cwd: process.cwd(), maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
-                if (error) {
-                    console.error('Error reading file:', error);
-                    reject(error);
-                    return;
-                }
-                resolve(stdout);
+    async loadFileContent(file) {
+        try {
+            console.log(`Loading file content for: ${file.path}`);
+            const content = await app.vault.read(file);
+            console.log(`Successfully loaded file content, length: ${content.length} characters`);
+            return content;
+        } catch (error) {
+            console.error('Error reading file:', error);
+            console.error('Error details:', {
+                message: error.message,
+                filePath: file ? file.path : 'undefined',
+                fileExists: file ? 'file object provided' : 'no file object',
+                vaultExists: typeof app !== 'undefined' && typeof app.vault !== 'undefined'
             });
-        });
+            return null;
+        }
     }
 
     createFileSelector() {
         const selector = this.container.createEl('div', { cls: 'email-file-selector' });
         selector.createEl('h3', { text: 'Select Email Thread File' });
-
+        
         const fileSelect = selector.createEl('select', { cls: 'email-file-select' });
-        fileSelect.createEl('option', { text: 'Choose a markdown file from .obsidian/Emails/.eml2md/output/...', value: '' });
+        fileSelect.createEl('option', { text: 'Choose a markdown file from Emails/eml2md/output/...', value: '' });
 
-        const loadButton = selector.createEl('button', { text: 'Load Emails', cls: 'email-load-button' });
+        const loadButton = selector.createEl('button', { 
+            text: 'Load Emails',
+            cls: 'email-load-button'
+        });
         loadButton.disabled = true;
 
+        // Populate file list
         this.getMarkdownFiles().then(files => {
-            for (const f of files) {
-                fileSelect.createEl('option', { text: f, value: f });
+            console.log(`Populating dropdown with ${files.length} files`);
+            for (const file of files) {
+                const option = fileSelect.createEl('option', { 
+                    text: file.path,
+                    value: file.path
+                });
             }
-        }).catch(err => {
-            selector.createEl('div', { text: 'Error loading file list', cls: 'email-error' });
+            if (files.length === 0) {
+                const noFilesOption = fileSelect.createEl('option', { 
+                    text: 'No email files found in Emails/eml2md/output/',
+                    value: '',
+                    disabled: true
+                });
+            }
+        }).catch(error => {
+            console.error('Failed to load file list:', error);
+            const errorDiv = selector.createEl('div', { 
+                text: `Error loading file list: ${error.message}`,
+                cls: 'email-error'
+            });
+            console.error('Error loading file list - check console for details');
         });
 
         fileSelect.addEventListener('change', () => {
@@ -358,17 +391,30 @@ class EmailReaderGUI {
         });
 
         loadButton.addEventListener('click', async () => {
-            const selectedFile = fileSelect.value;
-            if (!selectedFile) return;
-            try {
-                const content = await this.loadFileContent(selectedFile);
-                if (content) {
-                    this.selectedFile = selectedFile;
-                    this.emails = this.parseEmails(content);
-                    this.showEmailList();
-                }
-            } catch (err) {
-                selector.createEl('div', { text: 'Error: Could not read file', cls: 'email-error' });
+            const selectedPath = fileSelect.value;
+            if (!selectedPath) return;
+
+            console.log(`Loading file: ${selectedPath}`);
+            const file = app.vault.getAbstractFileByPath(selectedPath);
+            if (!file) {
+                console.error(`File not found: ${selectedPath}`);
+                selector.createEl('div', { 
+                    text: 'Error: File not found',
+                    cls: 'email-error'
+                });
+                return;
+            }
+
+            const content = await this.loadFileContent(file);
+            if (content) {
+                this.selectedFile = file;
+                this.emails = this.parseEmails(content);
+                this.showEmailList();
+            } else {
+                selector.createEl('div', { 
+                    text: 'Error: Could not read file',
+                    cls: 'email-error'
+                });
             }
         });
 
