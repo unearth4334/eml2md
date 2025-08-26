@@ -71,12 +71,17 @@ Launch the FastAPI-based GUI for a web interface:
 ```bash
 # Start the GUI application
 python run_gui.py
+
+# For debugging server startup issues, use verbose mode
+python run_gui.py --verbose
 ```
 
 This will:
 - Start a FastAPI web server
 - Open a chromium-based browser window with the interface
 - Automatically terminate the server when the window is closed
+
+If the GUI fails to start, use the `--verbose` flag to see detailed error messages that will help identify the problem (e.g., port conflicts, missing dependencies, browser issues).
 
 ![FastAPI GUI Interface](https://github.com/user-attachments/assets/a5231a9a-31d8-475b-ab31-1f8b9beac84a)
 

@@ -15,13 +15,20 @@ import psutil
 from pathlib import Path
 
 class GUILauncher:
-    def __init__(self):
+    def __init__(self, verbose=False):
         self.server_process = None
         self.browser_process = None
         self.running = True
+        self.verbose = verbose
         
+    def log(self, message):
+        """Print message if verbose mode is enabled."""
+        if self.verbose:
+            print(f"[VERBOSE] {message}")
+
     def find_chromium_browser(self):
         """Find available chromium-based browser."""
+        self.log("Searching for chromium-based browsers...")
         browsers = [
             'google-chrome',
             'chromium-browser', 
@@ -34,15 +41,19 @@ class GUILauncher:
         ]
         
         for browser in browsers:
+            self.log(f"Checking for browser: {browser}")
             try:
                 subprocess.run([browser, '--version'], 
                               stdout=subprocess.DEVNULL, 
                               stderr=subprocess.DEVNULL, 
                               check=True)
+                self.log(f"Found browser: {browser}")
                 return browser
             except (subprocess.CalledProcessError, FileNotFoundError):
+                self.log(f"Browser not found: {browser}")
                 continue
         
+        self.log("No chromium-based browser found")
         return None
 
     def start_server(self):
@@ -53,13 +64,26 @@ class GUILauncher:
         script_dir = Path(__file__).parent
         app_path = script_dir / "app.py"
         
+        self.log(f"Script directory: {script_dir}")
+        self.log(f"App path: {app_path}")
+        
+        # Check if app.py exists
+        if not app_path.exists():
+            print(f"ERROR: FastAPI app not found at {app_path}")
+            return False
+        
+        self.log(f"Starting server with command: {sys.executable} {app_path}")
+        
         try:
             self.server_process = subprocess.Popen(
                 [sys.executable, str(app_path)],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                cwd=str(script_dir)
+                cwd=str(script_dir),
+                text=True  # Ensure text mode for easier reading
             )
+            
+            self.log("Server process started, waiting for startup...")
             
             # Wait a moment for server to start
             time.sleep(2)
@@ -67,17 +91,34 @@ class GUILauncher:
             # Check if server is running
             if self.server_process.poll() is None:
                 print("FastAPI server started successfully on http://127.0.0.1:8000")
+                self.log("Server startup completed successfully")
                 return True
             else:
+                # Server process has terminated, get the error output
+                stdout, stderr = self.server_process.communicate()
+                exit_code = self.server_process.returncode
+                
                 print("Failed to start FastAPI server")
+                print(f"Server process exited with code: {exit_code}")
+                
+                if stderr:
+                    print("Error output:")
+                    print(stderr)
+                
+                if stdout:
+                    print("Standard output:")
+                    print(stdout)
+                
                 return False
                 
         except Exception as e:
             print(f"Error starting server: {e}")
+            self.log(f"Exception details: {type(e).__name__}: {e}")
             return False
 
     def open_browser(self):
         """Open chromium-based browser window."""
+        self.log("Starting browser search and launch process...")
         browser = self.find_chromium_browser()
         
         if not browser:
@@ -98,6 +139,8 @@ class GUILauncher:
                 '--disable-backgrounding-occluded-windows'
             ]
             
+            self.log(f"Browser command: {' '.join(browser_args)}")
+            
             self.browser_process = subprocess.Popen(
                 browser_args,
                 stdout=subprocess.DEVNULL,
@@ -105,10 +148,12 @@ class GUILauncher:
             )
             
             print("Browser window opened")
+            self.log(f"Browser process PID: {self.browser_process.pid}")
             return True
             
         except Exception as e:
             print(f"Error opening browser: {e}")
+            self.log(f"Browser exception details: {type(e).__name__}: {e}")
             return False
 
     def monitor_browser(self):
@@ -133,29 +178,44 @@ class GUILauncher:
     def cleanup(self):
         """Clean up processes."""
         print("Cleaning up...")
+        self.log("Starting cleanup process...")
         
         # Terminate server process
         if self.server_process and self.server_process.poll() is None:
             try:
                 print("Terminating FastAPI server...")
+                self.log(f"Terminating server process PID: {self.server_process.pid}")
                 self.server_process.terminate()
                 
                 # Wait a moment for graceful shutdown
                 try:
                     self.server_process.wait(timeout=5)
+                    self.log("Server terminated gracefully")
                 except subprocess.TimeoutExpired:
                     print("Force killing server...")
+                    self.log("Server did not terminate gracefully, force killing...")
                     self.server_process.kill()
+                    self.log("Server force killed")
                     
             except Exception as e:
                 print(f"Error terminating server: {e}")
+                self.log(f"Server termination exception: {type(e).__name__}: {e}")
+        else:
+            self.log("Server process already terminated or not started")
         
         # Ensure browser process is closed
         if self.browser_process and self.browser_process.poll() is None:
             try:
+                self.log(f"Terminating browser process PID: {self.browser_process.pid}")
                 self.browser_process.terminate()
+                self.log("Browser process terminated")
             except Exception as e:
                 print(f"Error terminating browser: {e}")
+                self.log(f"Browser termination exception: {type(e).__name__}: {e}")
+        else:
+            self.log("Browser process already terminated or not started")
+        
+        self.log("Cleanup process completed")
 
     def run(self):
         """Main launcher method."""
@@ -192,9 +252,9 @@ class GUILauncher:
         print("GUI application terminated.")
         return 0
 
-def main():
+def main(verbose=False):
     """Entry point for GUI launcher."""
-    launcher = GUILauncher()
+    launcher = GUILauncher(verbose=verbose)
     
     # Handle cleanup on exit
     def signal_handler(signum, frame):
