@@ -12,6 +12,7 @@ import sys
 import os
 import signal
 import psutil
+import socket
 from pathlib import Path
 
 class GUILauncher:
@@ -20,11 +21,27 @@ class GUILauncher:
         self.browser_process = None
         self.running = True
         self.verbose = verbose
+        self.port = None
         
     def log(self, message):
         """Print message if verbose mode is enabled."""
         if self.verbose:
             print(f"[VERBOSE] {message}")
+
+    def find_available_port(self, start_port=8000, max_attempts=10):
+        """Find an available port starting from start_port."""
+        self.log(f"Searching for available port starting from {start_port}")
+        for port in range(start_port, start_port + max_attempts):
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                    sock.bind(('127.0.0.1', port))
+                    self.log(f"Port {port} is available")
+                    return port
+            except OSError:
+                self.log(f"Port {port} is not available")
+                continue
+        self.log(f"No available ports found in range {start_port}-{start_port + max_attempts - 1}")
+        return None
 
     def find_chromium_browser(self):
         """Find available chromium-based browser."""
@@ -60,6 +77,15 @@ class GUILauncher:
         """Start FastAPI server in background."""
         print("Starting FastAPI server...")
         
+        # Find available port
+        if self.port is None:
+            self.port = self.find_available_port(8000)
+            if self.port is None:
+                print("ERROR: No available ports found in range 8000-8009")
+                return False
+        
+        print(f"Using port: {self.port}")
+        
         # Get the directory where this script is located
         script_dir = Path(__file__).parent
         app_path = script_dir / "app.py"
@@ -72,11 +98,11 @@ class GUILauncher:
             print(f"ERROR: FastAPI app not found at {app_path}")
             return False
         
-        self.log(f"Starting server with command: {sys.executable} {app_path}")
+        self.log(f"Starting server with command: {sys.executable} {app_path} {self.port}")
         
         try:
             self.server_process = subprocess.Popen(
-                [sys.executable, str(app_path)],
+                [sys.executable, str(app_path), str(self.port)],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 cwd=str(script_dir),
@@ -90,7 +116,7 @@ class GUILauncher:
             
             # Check if server is running
             if self.server_process.poll() is None:
-                print("FastAPI server started successfully on http://127.0.0.1:8000")
+                print(f"FastAPI server started successfully on http://127.0.0.1:{self.port}")
                 self.log("Server startup completed successfully")
                 return True
             else:
@@ -118,6 +144,10 @@ class GUILauncher:
 
     def open_browser(self):
         """Open chromium-based browser window."""
+        if self.port is None:
+            print("ERROR: Port not set, cannot open browser")
+            return False
+            
         self.log("Starting browser search and launch process...")
         browser = self.find_chromium_browser()
         
@@ -131,7 +161,7 @@ class GUILauncher:
             # Browser arguments for app-like experience
             browser_args = [
                 browser,
-                '--app=http://127.0.0.1:8000',
+                f'--app=http://127.0.0.1:{self.port}',
                 '--no-first-run',
                 '--no-default-browser-check',
                 '--disable-background-timer-throttling',
@@ -229,7 +259,7 @@ class GUILauncher:
         
         # Open browser
         if not self.open_browser():
-            print("Failed to open browser. Server is running at http://127.0.0.1:8000")
+            print(f"Failed to open browser. Server is running at http://127.0.0.1:{self.port}")
             self.cleanup()
             return 1
         
