@@ -246,10 +246,11 @@ class EmailReaderGUI {
     }
 
     async getMarkdownFiles() {
-        // Get all markdown files in the vault
+        // Get all markdown files in the vault, filtered to Emails/eml2md/output/ directory
         const files = app.vault.getMarkdownFiles();
         return files.filter(file => 
             file.path.endsWith('.md') && 
+            file.path.startsWith('Emails/eml2md/output/') &&
             !file.path.includes('email_reader_gui.md') // Exclude this file
         );
     }
@@ -278,7 +279,7 @@ class EmailReaderGUI {
         selector.createEl('h3', { text: 'Select Email Thread File' });
         
         const fileSelect = selector.createEl('select', { cls: 'email-file-select' });
-        fileSelect.createEl('option', { text: 'Choose a markdown file...', value: '' });
+        fileSelect.createEl('option', { text: 'Choose a markdown file from Emails/eml2md/output/...', value: '' });
         
         const loadButton = selector.createEl('button', { 
             text: 'Load Emails',
