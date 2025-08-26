@@ -13,6 +13,7 @@ This tool converts email files (`.eml`) to Markdown format (`.md`) while preserv
 - Organizes content in chronological order (oldest-to-newest or newest-to-oldest)
 - Moves processed files to a separate directory
 - Creates a clean directory structure for output files
+- **NEW:** Obsidian GUI interface with DataViewJS for easy one-click processing
 
 ## Directory Structure
 
@@ -45,6 +46,22 @@ python create_gitkeep.py
 ```
 
 ## Usage
+
+### GUI Interface (Recommended for Obsidian users)
+
+If you're using Obsidian, you can use the convenient GUI interface:
+
+1. Place your `.eml` files in the `input` directory
+2. Open `email_reader_gui.md` in Obsidian
+3. Click the "Process EML Files" button to convert all files with default settings
+4. Or use the "Advanced Options" section to customize the conversion with different settings
+
+**Requirements for GUI:**
+- Obsidian with DataViewJS plugin enabled
+- Python virtual environment at `Emails/eml2md/venv/Scripts/python.exe`
+- File system access permissions in Obsidian
+
+### Command Line Interface
 
 1. Place your `.eml` files in the `input` directory
 2. Run the script:
@@ -146,9 +163,14 @@ This is the content of the email.
 
 - `eml2md.py` - The main script that handles the conversion process
 
+### GUI Interface
+
+- `email_reader_gui.md` - Obsidian-compatible GUI interface with DataViewJS buttons for easy one-click email processing
+
 ### Utility Scripts
 
 - `create_gitkeep.py` - Sets up the required directory structure and creates .gitkeep files to ensure the directories are tracked by Git while ignoring their contents. Run this script once when setting up the project.
+- `read_md_email.py` - Utility script for reading and extracting individual emails from generated Markdown files
 
 ### Configuration Files
 
