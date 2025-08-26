@@ -1,19 +1,10 @@
-# Email Reader - DataviewJS Alternative
+# Email Reader - DataviewJS GUI
 
-This document explains the DataviewJS alternative to the FastAPI GUI for reading email threads in Obsidian.
+This document explains how to use the DataviewJS GUI for reading email threads in Obsidian.
 
-## Problem
+## About
 
-The original GUI uses a FastAPI server on localhost:8000, which may encounter network permission errors in restricted environments:
-
-```
-ERROR: [Errno 13] error while attempting to bind on address ('127.0.0.1', 8000): 
-an attempt was made to access a socket in a way forbidden by its access permissions
-```
-
-## Solution
-
-The DataviewJS implementation provides the same functionality but runs entirely within Obsidian, eliminating network requirements.
+The DataviewJS implementation provides a complete GUI solution that runs entirely within Obsidian, providing an excellent user experience without any network requirements or external dependencies.
 
 ## Setup Instructions
 

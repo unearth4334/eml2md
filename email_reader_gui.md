@@ -19,9 +19,82 @@ This is an Obsidian-based GUI for reading and extracting individual emails from 
 
 ---
 
+
 ```dataviewjs
-// Email Reader GUI DataviewJS Implementation
-// Replicates the functionality of read_md_email.py
+const { exec } = require('child_process');
+const path = require('path');
+
+// Create the button
+const button = dv.el("button", "Process EML Files", {
+    style: "background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin: 10px 0;"
+});
+
+// Create status div
+const statusDiv = dv.el("div", "", {
+    style: "margin-top: 10px; padding: 10px; border-radius: 4px; display: none;"
+});
+
+// Add click event listener
+button.addEventListener('click', function() {
+    // Show processing status
+    statusDiv.style.display = "block";
+    statusDiv.style.backgroundColor = "#e7f3ff";
+    statusDiv.style.color = "#004085";
+    statusDiv.textContent = "Processing EML files... Please wait.";
+    
+    // Disable button during processing
+    button.disabled = true;
+    button.textContent = "Processing...";
+    button.style.backgroundColor = "#cccccc";
+    
+    // Define the command to run
+    const command = 'cd %HOMEPATH%\\.obsidian\\Emails\\.eml2md & .venv\\Scripts\\python.exe eml2md.py';
+    
+    // Execute the command
+    exec(command, { cwd: process.cwd() }, (error, stdout, stderr) => {
+        // Re-enable button
+        button.disabled = false;
+        button.textContent = "Process EML Files";
+        button.style.backgroundColor = "#4CAF50";
+        
+        if (error) {
+            // Show error status
+            statusDiv.style.backgroundColor = "#f8d7da";
+            statusDiv.style.color = "#721c24";
+            statusDiv.innerHTML = `<strong>Error:</strong> ${error.message}<br><br><strong>Command:</strong> ${command}`;
+            console.error('Error executing eml2md:', error);
+            return;
+        }
+        
+        if (stderr) {
+            // Show warning/stderr
+            statusDiv.style.backgroundColor = "#fff3cd";
+            statusDiv.style.color = "#856404";
+            statusDiv.innerHTML = `<strong>Warning:</strong><br><pre>${stderr}</pre>`;
+        }
+        
+        if (stdout) {
+            // Show success status with output
+            statusDiv.style.backgroundColor = "#d4edda";
+            statusDiv.style.color = "#155724";
+            statusDiv.innerHTML = `<strong>Success!</strong> EML files processed successfully.<br><br><strong>Output:</strong><br><pre>${stdout}</pre>`;
+        } else if (!stderr) {
+            // Show success without output
+            statusDiv.style.backgroundColor = "#d4edda";
+            statusDiv.style.color = "#155724";
+            statusDiv.textContent = "EML files processed successfully!";
+        }
+    });
+});
+
+// Add elements to the page
+dv.container.appendChild(button);
+dv.container.appendChild(statusDiv);
+```
+
+```dataviewjs
+const { exec } = require('child_process');
+const path = require('path');
 
 class EmailReaderGUI {
     constructor() {
@@ -30,7 +103,6 @@ class EmailReaderGUI {
         this.container = null;
     }
 
-    // Helper functions (equivalent to Python helpers)
     cleanWhitespace(text) {
         return text ? text.replace(/\s+/g, ' ').trim() : '';
     }
@@ -47,9 +119,9 @@ class EmailReaderGUI {
     }
 
     normalizeNameEmailGlue(s) {
-        s = s.replace(/[\r\n\t]+/g, ' ');  // collapse newlines/tabs
-        s = s.replace(/\b,\s*(<[^>]+>)/g, ' $1');  // remove stray comma before <email>
-        s = s.replace(/\s{2,}/g, ' ').trim();  // dedupe spaces
+        s = s.replace(/[\r\n\t]+/g, ' ');
+        s = s.replace(/\b,\s*(<[^>]+>)/g, ' $1');
+        s = s.replace(/\s{2,}/g, ' ').trim();
         return s;
     }
 
@@ -59,7 +131,6 @@ class EmailReaderGUI {
         const recipients = [];
         const usedSpans = [];
 
-        // 1) Capture Name <email> patterns
         const nameEmailRegex = /(?:^|[;,])\s*([^<>",;]+?)\s*<([^>]+)>/g;
         let match;
         while ((match = nameEmailRegex.exec(s)) !== null) {
@@ -70,31 +141,26 @@ class EmailReaderGUI {
             usedSpans.push([match.index, match.index + match[0].length]);
         }
 
-        // Mask consumed spans
         let masked = s.split('');
         for (const [start, end] of usedSpans) {
             for (let i = start; i < end; i++) {
-                masked[i] = '\0';
+                masked[i] = '\\0';
             }
         }
         masked = masked.join('');
 
-        // 2) Add any bare emails left
-        const emailRegex = /(?<![<@])([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
+        const emailRegex = /(?<![<@])([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,})/g;
         while ((match = emailRegex.exec(masked)) !== null) {
             recipients.push(match[1]);
         }
 
-        // 3) Fallback split if nothing matched
         if (recipients.length === 0) {
             const parts = s.split(/[;,]/).map(p => p.trim()).filter(p => p);
             recipients.push(...parts);
         }
 
-        // 4) Clean any accidental leading separators
-        const cleaned = recipients.map(r => r.replace(/^[,;]\s*/, '').trim());
+        const cleaned = recipients.map(r => r.replace(/^[,;]\\s*/, '').trim());
 
-        // De-duplicate while preserving order
         const seen = new Set();
         const unique = [];
         for (const r of cleaned) {
@@ -120,21 +186,21 @@ class EmailReaderGUI {
     }
 
     parseEmails(mdText) {
-        const chunks = mdText.split(/(?=^## Email\s+\d+\s*$)/m);
+        const chunks = mdText.split(/(?=^## Email\\s+\\d+\\s*$)/m);
         const emails = [];
 
         for (const chunk of chunks) {
             if (!chunk.trim()) continue;
 
-            const numMatch = chunk.match(/^## Email\s+(\d+)\s*$/m);
+            const numMatch = chunk.match(/^## Email\\s+(\\d+)\\s*$/m);
             const emailNumber = numMatch ? parseInt(numMatch[1]) : null;
 
-            const dateMatch = chunk.match(/\*\*Date\*\*:\s*(.+)/);
-            const fromMatch = chunk.match(/\*\*From\*\*:\s*(.+)/);
-            const toMatch = chunk.match(/\*\*To\*\*:\s*(.+?)(?=\n\*\*(CC|Subject)\*\*:|\n###|$)/s);
-            const ccMatch = chunk.match(/\*\*CC\*\*:\s*(.+?)(?=\n\*\*Subject\*\*:|\n###|$)/s);
-            const subjMatch = chunk.match(/\*\*Subject\*\*:\s*(.+)/);
-            const contentMatch = chunk.match(/### Content\s*\n(.+?)(?=\n-{3,}|\n## |\n### Attachments|$)/s);
+            const dateMatch = chunk.match(/\\*\\*Date\\*\\*:\\s*(.+)/);
+            const fromMatch = chunk.match(/\\*\\*From\\*\\*:\\s*(.+)/);
+            const toMatch = chunk.match(/\\*\\*To\\*\\*:\\s*(.+?)(?=\\n\\*\\*(CC|Subject)\\*\\*:|\\n###|$)/s);
+            const ccMatch = chunk.match(/\\*\\*CC\\*\\*:\\s*(.+?)(?=\\n\\*\\*Subject\\*\\*:|\\n###|$)/s);
+            const subjMatch = chunk.match(/\\*\\*Subject\\*\\*:\\s*(.+)/);
+            const contentMatch = chunk.match(/### Content\\s*\\n(.+?)(?=\\n-{3,}|\\n## |\\n### Attachments|$)/s);
 
             if (!(dateMatch || fromMatch || subjMatch || contentMatch)) {
                 continue;
@@ -146,15 +212,11 @@ class EmailReaderGUI {
             
             if (dateRaw) {
                 try {
-                    // Try to parse the date (simplified)
                     dateObj = new Date(dateRaw);
                     if (!isNaN(dateObj.getTime())) {
-                        // Format as YYYY-MM-DD HH:MM
                         dateOut = dateObj.toISOString().slice(0, 16).replace('T', ' ');
                     }
-                } catch (e) {
-                    // Date parsing failed, keep original
-                }
+                } catch (e) {}
             }
 
             const toList = this.parseRecipientsList(toMatch ? toMatch[1] : '');
@@ -163,7 +225,6 @@ class EmailReaderGUI {
 
             let contentRaw = contentMatch ? contentMatch[1].trim() : '';
             
-            // Remove quoted history after underscore separators
             let splitPos = null;
             const sepMatch = contentRaw.match(/^_{6,}.*$/m);
             if (sepMatch) {
@@ -190,7 +251,6 @@ class EmailReaderGUI {
             });
         }
 
-        // Sort newest first (undated go last)
         emails.sort((a, b) => {
             const aTime = a.date ? a.date.getTime() : -Infinity;
             const bTime = b.date ? b.date.getTime() : -Infinity;
@@ -240,61 +300,57 @@ class EmailReaderGUI {
 
         const escapedSubject = email.subject.replace(/"/g, '\\"');
         lines.push(`subject: "${escapedSubject}"`);
-        lines.push('---\n');
+        lines.push('---\\n');
         
-        return lines.join('\n');
+        return lines.join('\\n');
     }
 
     async getMarkdownFiles() {
-        // Get all markdown files in the vault, filtered to Emails/eml2md/output/ directory
-        const files = app.vault.getMarkdownFiles();
-        return files.filter(file => 
-            file.path.endsWith('.md') && 
-            file.path.startsWith('Emails/eml2md/output/') &&
-            !file.path.includes('email_reader_gui.md') // Exclude this file
-        );
+        return new Promise((resolve, reject) => {
+            const command = 'cd %HOMEPATH%\\.obsidian\\Emails\\.eml2md\\output & dir /b *.md';
+            exec(command, { cwd: process.cwd() }, (error, stdout, stderr) => {
+                if (error) {
+                    console.error('Error listing markdown files:', error);
+                    reject(error);
+                    return;
+                }
+                const files = stdout.split(/\\r?\\n/).map(f => f.trim()).filter(f => f.endsWith('.md'));
+                resolve(files);
+            });
+        });
     }
 
-    async loadFileContent(file) {
-        try {
-            return await app.vault.read(file);
-        } catch (error) {
-            console.error('Error reading file:', error);
-            return null;
-        }
-    }
-
-    async copyToClipboard(text) {
-        try {
-            await navigator.clipboard.writeText(text);
-            return true;
-        } catch (error) {
-            console.error('Failed to copy to clipboard:', error);
-            return false;
-        }
+    async loadFileContent(filename) {
+        return new Promise((resolve, reject) => {
+            const fullPath = `%HOMEPATH%\\.obsidian\\Emails\\.eml2md\\output\\${filename}`;
+            const command = `type "${fullPath}"`;
+            exec(command, { cwd: process.cwd(), maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+                if (error) {
+                    console.error('Error reading file:', error);
+                    reject(error);
+                    return;
+                }
+                resolve(stdout);
+            });
+        });
     }
 
     createFileSelector() {
         const selector = this.container.createEl('div', { cls: 'email-file-selector' });
         selector.createEl('h3', { text: 'Select Email Thread File' });
-        
+
         const fileSelect = selector.createEl('select', { cls: 'email-file-select' });
-        fileSelect.createEl('option', { text: 'Choose a markdown file from Emails/eml2md/output/...', value: '' });
-        
-        const loadButton = selector.createEl('button', { 
-            text: 'Load Emails',
-            cls: 'email-load-button'
-        });
+        fileSelect.createEl('option', { text: 'Choose a markdown file from .obsidian/Emails/.eml2md/output/...', value: '' });
+
+        const loadButton = selector.createEl('button', { text: 'Load Emails', cls: 'email-load-button' });
         loadButton.disabled = true;
 
-        // Populate file list
         this.getMarkdownFiles().then(files => {
-            for (const file of files) {
-                const option = fileSelect.createEl('option', { 
-                    text: file.path,
-                    value: file.path
-                });
+            for (const f of files) {
+                fileSelect.createEl('option', { text: f, value: f });
             }
+        }).catch(err => {
+            selector.createEl('div', { text: 'Error loading file list', cls: 'email-error' });
         });
 
         fileSelect.addEventListener('change', () => {
@@ -302,28 +358,17 @@ class EmailReaderGUI {
         });
 
         loadButton.addEventListener('click', async () => {
-            const selectedPath = fileSelect.value;
-            if (!selectedPath) return;
-
-            const file = app.vault.getAbstractFileByPath(selectedPath);
-            if (!file) {
-                selector.createEl('div', { 
-                    text: 'Error: File not found',
-                    cls: 'email-error'
-                });
-                return;
-            }
-
-            const content = await this.loadFileContent(file);
-            if (content) {
-                this.selectedFile = file;
-                this.emails = this.parseEmails(content);
-                this.showEmailList();
-            } else {
-                selector.createEl('div', { 
-                    text: 'Error: Could not read file',
-                    cls: 'email-error'
-                });
+            const selectedFile = fileSelect.value;
+            if (!selectedFile) return;
+            try {
+                const content = await this.loadFileContent(selectedFile);
+                if (content) {
+                    this.selectedFile = selectedFile;
+                    this.emails = this.parseEmails(content);
+                    this.showEmailList();
+                }
+            } catch (err) {
+                selector.createEl('div', { text: 'Error: Could not read file', cls: 'email-error' });
             }
         });
 
@@ -389,13 +434,13 @@ class EmailReaderGUI {
         const outputContainer = this.container.createEl('div', { cls: 'email-output-container' });
         outputContainer.createEl('h3', { text: `Extracted Email ${index + 1}` });
 
-        const result = this.renderObsidianYaml(email) + email.content.trim() + '\n';
+        const result = this.renderObsidianYaml(email) + email.content.trim() + '\\n';
 
         const outputArea = outputContainer.createEl('textarea', {
             cls: 'email-output-text',
             attr: { 
                 readonly: true,
-                rows: Math.min(result.split('\n').length + 2, 25)
+                rows: Math.min(result.split('\\n').length + 2, 25)
             }
         });
         outputArea.value = result;
@@ -613,4 +658,5 @@ class EmailReaderGUI {
 // Initialize and render the GUI
 const emailGUI = new EmailReaderGUI();
 emailGUI.render(this.container);
+
 ```
