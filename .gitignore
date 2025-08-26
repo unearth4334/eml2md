@@ -68,3 +68,8 @@ pyvenv.cfg
 
 # But include templates directory
 !templates/
+
+# Test files
+test_*.py
+test_*.html
+*.test.js
