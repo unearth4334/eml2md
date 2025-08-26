@@ -281,11 +281,18 @@ class EmailReaderGUI {
         const fileSelect = selector.createEl('select', { cls: 'email-file-select' });
         fileSelect.createEl('option', { text: 'Choose a markdown file from Emails/eml2md/output/...', value: '' });
         
-        const loadButton = selector.createEl('button', { 
+        const buttonContainer = selector.createEl('div', { cls: 'email-file-button-container' });
+        
+        const loadButton = buttonContainer.createEl('button', { 
             text: 'Load Emails',
             cls: 'email-load-button'
         });
         loadButton.disabled = true;
+
+        const runEmlButton = buttonContainer.createEl('button', { 
+            text: 'Run eml2md.py Script',
+            cls: 'email-run-eml-button'
+        });
 
         // Populate file list
         this.getMarkdownFiles().then(files => {
@@ -299,6 +306,42 @@ class EmailReaderGUI {
 
         fileSelect.addEventListener('change', () => {
             loadButton.disabled = !fileSelect.value;
+        });
+
+        runEmlButton.addEventListener('click', async () => {
+            const command = 'cd C:\\Users\\10588\\.obsidian\\Emails\\.eml2md & .venv\\Scripts\\python.exe eml2md.py';
+            const success = await this.copyToClipboard(command);
+            
+            if (success) {
+                runEmlButton.textContent = 'Command Copied!';
+                setTimeout(() => {
+                    runEmlButton.textContent = 'Run eml2md.py Script';
+                }, 2000);
+            } else {
+                runEmlButton.textContent = 'Copy Failed';
+                setTimeout(() => {
+                    runEmlButton.textContent = 'Run eml2md.py Script';
+                }, 2000);
+            }
+            
+            // Also show a helpful message
+            const existingMsg = selector.querySelector('.eml-command-info');
+            if (existingMsg) {
+                existingMsg.remove();
+            }
+            
+            const infoDiv = selector.createEl('div', { 
+                cls: 'eml-command-info',
+                text: success ? 
+                    'Command copied to clipboard! Paste and run in Command Prompt/Terminal to process .eml files.' :
+                    'Failed to copy command. Command: ' + command
+            });
+            
+            setTimeout(() => {
+                if (infoDiv.parentNode) {
+                    infoDiv.remove();
+                }
+            }, 5000);
         });
 
         loadButton.addEventListener('click', async () => {
@@ -479,6 +522,12 @@ class EmailReaderGUI {
                 border: 1px solid var(--background-modifier-border);
             }
             
+            .email-file-button-container {
+                display: flex;
+                gap: 10px;
+                margin-top: 10px;
+            }
+            
             .email-load-button {
                 padding: 8px 16px;
                 background: var(--interactive-accent);
@@ -491,6 +540,25 @@ class EmailReaderGUI {
             .email-load-button:disabled {
                 opacity: 0.5;
                 cursor: not-allowed;
+            }
+            
+            .email-run-eml-button {
+                padding: 8px 16px;
+                background: var(--interactive-success);
+                color: var(--text-on-accent);
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+            
+            .eml-command-info {
+                margin-top: 10px;
+                padding: 10px;
+                background: var(--background-modifier-success);
+                border: 1px solid var(--color-success);
+                border-radius: 4px;
+                font-size: 0.9em;
+                color: var(--text-normal);
             }
             
             .email-list {
