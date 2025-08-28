@@ -1,0 +1,27 @@
+# eml2md Configuration File
+# This file allows you to configure directory paths and other settings for the EML to Markdown converter
+
+# Directory Configuration
+directories:
+  # Directory where EML files are read from
+  input: "input"
+  
+  # Directory where converted Markdown files are saved
+  output: "output"
+  
+  # Directory where processed EML files are moved to
+  done: "done"
+
+# Processing Configuration
+processing:
+  # Sort emails from newest to oldest (true) or oldest to newest (false)
+  newest_first: false
+  
+  # Hamming distance threshold for email deduplication (1-64)
+  # Lower values = stricter deduplication, higher values = more lenient
+  dedup_threshold: 8
+
+# Optional: Custom file patterns (future extension)
+# patterns:
+#   eml_extension: ".eml"
+#   output_extension: ".md"

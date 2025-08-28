@@ -18,15 +18,18 @@ This tool converts email files (`.eml`) to Markdown format (`.md`) while preserv
 
 ```
 project/
-├── input/         # Place .eml files here
-├── output/        # Converted files will be saved here (one directory per email)
+├── input/         # Place .eml files here (configurable)
+├── output/        # Converted files will be saved here (configurable)
 │   └── email1/    # Example output directory
 │       ├── email1.md
 │       └── [attachments]
-├── done/          # Processed .eml files are moved here
+├── done/          # Processed .eml files are moved here (configurable)
+├── eml2md_config.yml  # Configuration file for directory paths and settings
 ├── .gitignore     # Configured to ignore email content
 └── create_gitkeep.py  # Utility script to set up directory structure
 ```
+
+**Note:** All directory paths can be customized using the `eml2md_config.yml` configuration file.
 
 ## Installation
 
@@ -82,6 +85,50 @@ See `DATAVIEWJS_README.md` for detailed setup instructions.
 |--------|-------------|
 | `--newest-first` | Sort emails from newest to oldest in the markdown file (default is oldest to newest) |
 | `--dedup-threshold VALUE` | Set the similarity threshold for deduplication (default is 8, higher values mean more aggressive deduplication) |
+| `--config FILE` | Path to configuration file (default: eml2md_config.yml) |
+
+### Configuration File
+
+You can configure directory paths and default settings using a YAML configuration file. Create an `eml2md_config.yml` file in the same directory as `eml2md.py`:
+
+```yaml
+# eml2md Configuration File
+directories:
+  # Directory where EML files are read from
+  input: "input"
+  
+  # Directory where converted Markdown files are saved
+  output: "output"
+  
+  # Directory where processed EML files are moved to
+  done: "done"
+
+processing:
+  # Sort emails from newest to oldest (true) or oldest to newest (false)
+  newest_first: false
+  
+  # Hamming distance threshold for email deduplication (1-64)
+  dedup_threshold: 8
+```
+
+**Configuration Features:**
+- Custom directory paths for input, output, and done directories
+- Default processing settings that can be overridden by command line arguments
+- Automatic creation of specified directories if they don't exist
+- Graceful fallback to defaults if configuration file is missing or invalid
+
+**Examples:**
+
+```bash
+# Use default configuration file (eml2md_config.yml)
+python eml2md.py
+
+# Use custom configuration file
+python eml2md.py --config my_custom_config.yml
+
+# Override config settings with command line arguments
+python eml2md.py --newest-first --dedup-threshold 12
+```
 
 ## Thread Detection and Deduplication
 
