@@ -4,6 +4,7 @@ import shutil
 import re
 import datetime
 import binascii
+import yaml
 from email.utils import parsedate_to_datetime
 from email.header import decode_header
 
@@ -44,6 +45,56 @@ def decode_email_header(header):
             decoded_parts.append(content)
 
     return "".join(decoded_parts)
+
+
+def load_config(config_file='eml2md_config.yml'):
+    """Load configuration from YAML file.
+    
+    Args:
+        config_file: Path to the configuration file
+        
+    Returns:
+        Dictionary containing configuration settings
+    """
+    # Default configuration
+    default_config = {
+        'directories': {
+            'input': 'input',
+            'output': 'output',
+            'done': 'done'
+        },
+        'processing': {
+            'newest_first': False,
+            'dedup_threshold': 8
+        }
+    }
+    
+    # Try to load configuration file
+    if os.path.exists(config_file):
+        try:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f)
+                
+            # Merge with defaults to ensure all required keys exist
+            if config:
+                # Update directories if provided
+                if 'directories' in config:
+                    default_config['directories'].update(config['directories'])
+                
+                # Update processing settings if provided
+                if 'processing' in config:
+                    default_config['processing'].update(config['processing'])
+                    
+            print(f"Configuration loaded from {config_file}")
+            
+        except Exception as e:
+            print(f"Warning: Error loading config file {config_file}: {e}")
+            print("Using default configuration")
+            
+    else:
+        print(f"Configuration file {config_file} not found, using defaults")
+    
+    return default_config
 
 
 def extract_email_parts(msg):
@@ -370,12 +421,15 @@ def create_markdown_content(emails, newest_first=False):
     return markdown_content
 
 
-def process_eml_file(eml_file_path, newest_first=False):
+def process_eml_file(eml_file_path, newest_first=False, output_dir='output', done_dir='done', dedup_threshold=8):
     """Process an EML file and convert it to Markdown with attachments.
 
     Args:
         eml_file_path: Path to the EML file
         newest_first: If True, sorts emails from newest to oldest. Default is oldest to newest.
+        output_dir: Directory to save converted markdown files
+        done_dir: Directory to move processed EML files
+        dedup_threshold: Hamming distance threshold for deduplication
     """
     # Import here to avoid circular imports
     import dateutil.parser
@@ -383,7 +437,7 @@ def process_eml_file(eml_file_path, newest_first=False):
     # Create output directory name based on EML filename
     eml_basename = os.path.basename(eml_file_path)
     output_dir_name = os.path.splitext(eml_basename)[0]
-    output_dir_path = os.path.join('output', output_dir_name)
+    output_dir_path = os.path.join(output_dir, output_dir_name)
     os.makedirs(output_dir_path, exist_ok=True)
 
     # Parse the EML file
@@ -443,7 +497,7 @@ def process_eml_file(eml_file_path, newest_first=False):
 
     # Deduplicate emails using SimHash
     print(f"Found {len(emails)} emails before deduplication")
-    unique_emails = deduplicate_emails(emails)
+    unique_emails = deduplicate_emails(emails, dedup_threshold)
     print(f"Reduced to {len(unique_emails)} unique emails after deduplication")
 
     # Create markdown content (no need to normalize dates again, they're already normalized)
@@ -465,7 +519,6 @@ def process_eml_file(eml_file_path, newest_first=False):
                 attachment_file.write(attachment_content)
 
     # Move processed EML file to 'done' directory
-    done_dir = 'done'
     os.makedirs(done_dir, exist_ok=True)
     shutil.move(eml_file_path, os.path.join(done_dir, eml_basename))
 
@@ -482,21 +535,34 @@ def main():
                         help='Sort emails from newest to oldest (default: oldest to newest)')
     parser.add_argument('--dedup-threshold', type=int, default=8,
                         help='Hamming distance threshold for deduplication (default: 8)')
+    parser.add_argument('--config', default='eml2md_config.yml',
+                        help='Path to configuration file (default: eml2md_config.yml)')
     args = parser.parse_args()
 
+    # Load configuration
+    config = load_config(args.config)
+    
+    # Get directory paths from config
+    input_dir = config['directories']['input']
+    output_dir = config['directories']['output']
+    done_dir = config['directories']['done']
+    
+    # Override config settings with command line arguments if provided
+    newest_first = args.newest_first if args.newest_first else config['processing']['newest_first']
+    dedup_threshold = args.dedup_threshold
+
     # Create required directories if they don't exist
-    for directory in ['input', 'output', 'done']:
+    for directory in [input_dir, output_dir, done_dir]:
         os.makedirs(directory, exist_ok=True)
 
     # Process all EML files in the input directory
-    input_dir = 'input'
     processed_files = []
 
     for filename in os.listdir(input_dir):
         if filename.lower().endswith('.eml'):
             eml_file_path = os.path.join(input_dir, filename)
             try:
-                md_file_path = process_eml_file(eml_file_path, args.newest_first)
+                md_file_path = process_eml_file(eml_file_path, newest_first, output_dir, done_dir, dedup_threshold)
                 processed_files.append((filename, md_file_path))
                 print(f"Processed: {filename} -> {md_file_path}")
             except Exception as e:
